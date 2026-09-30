@@ -7,7 +7,7 @@ class ClubBase(BaseModel):
     club_name: str
     competition: str
     department: str
-    captain_id: int
+    captain_id: Optional[int] = None
 
 class ClubCreate(ClubBase):
     pass
