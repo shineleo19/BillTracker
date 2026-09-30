@@ -107,6 +107,16 @@ def seed_admin(db: Session = Depends(get_db)):
     existing_user = db.query(models.User).filter(models.User.email == "captain@bajateam.com").first()
     if existing_user:
         return {"message": "Test user already exists! You can log in."}
+
+    club = db.query(models.Club).first()
+    if not club:
+        club = models.Club(
+            club_name="Baja Team",
+            competition="BAJA",
+            department="Engineering",
+        )
+        db.add(club)
+        db.flush()
     
     hashed_pw = get_password_hash("password123")
     admin_user = models.User(
@@ -114,7 +124,7 @@ def seed_admin(db: Session = Depends(get_db)):
         email="captain@bajateam.com",
         password=hashed_pw,
         role="Captain",
-        club_id=1
+        club_id=club.id
     )
     db.add(admin_user)
     db.commit()
