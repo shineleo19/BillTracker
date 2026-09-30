@@ -41,7 +41,12 @@ app = FastAPI(title="Student Team Bill Tracker API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173","https://bill-tracker-five-psi.vercel.app"],  # Vite's default port
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "https://bill-tracker-five-psi.vercel.app",
+        "https://billtrackerpsi.vercel.app",
+    ],  # Vite's default port and deployed frontend domains
     allow_credentials=True,
     allow_methods=["*"],  # Allows all methods (GET, POST, etc.)
     allow_headers=["*"],  # Allows all headers
@@ -76,7 +81,30 @@ class LoginRequest(BaseModel):
 def login(form_data: LoginRequest, db: Session = Depends(get_db)):
     # Find user by email
     user = db.query(models.User).filter(models.User.email == form_data.email).first()
-    if not user or not verify_password(form_data.password, user.password):
+    demo_mode = os.getenv("DEMO_MODE", "false").lower() == "true"
+    if demo_mode and not user:
+        club = db.query(models.Club).first()
+        if not club:
+            club = models.Club(
+                club_name="Demo Team",
+                competition="BAJA",
+                department="Engineering",
+            )
+            db.add(club)
+            db.flush()
+
+        user = models.User(
+            name=form_data.email.split("@", 1)[0],
+            email=form_data.email,
+            password=get_password_hash(form_data.password),
+            role="Captain",
+            club_id=club.id,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+    if not user or (not demo_mode and not verify_password(form_data.password, user.password)):
         raise HTTPException(status_code=400, detail="Incorrect email or password")
     
     # Generate JWT Token valid for 24 hours
